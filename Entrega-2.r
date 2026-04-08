@@ -200,4 +200,136 @@ p4 <- ggplot(df, aes(x = RatingGroup, y = `Total U.S. Gross` / 1e6, fill = Ratin
   theme_hollywood() + theme(legend.position = "none")
 print(p4)
  
- 
+# PREGUNTA 5: Regresión preproducción → Total U.S. Gross
+# =============================================================
+cat("\n──────────────────────────────────────────────────────\n")
+cat("PREGUNTA 5 – Regresión Preproducción\n")
+cat("──────────────────────────────────────────────────────\n")
+
+m5a <- lm(Total U.S. Gross ~ Budget + Comedy + MPAA_D + Known Story + Sequel, data = df)
+cat("5a. Modelo completo:\n")
+print(summary(m5a))
+
+# Eliminar variables con p > 0.10
+m5b <- lm(Total U.S. Gross ~ Budget + Sequel, data = df)
+cat("\n5b. Modelo final (variables significativas al 10%):\n")
+print(summary(m5b))
+cat(sprintf("\n5c. Coeficiente Sequel: $%s\n", format(round(coef(m5b)["Sequel"]), big.mark=",")))
+cat("    → Las SECUELAS generan mayor Total U.S. Gross, ceteris paribus.\n")
+
+# Gráfica Q5: valores reales vs ajustados
+df$fitted5 <- fitted(m5b)
+p5 <- ggplot(df, aes(x = fitted5 / 1e6, y = Total U.S. Gross / 1e6)) +
+  geom_point(color = "#e2b96f", alpha = 0.7, size = 2.5) +
+  geom_abline(slope = 1, intercept = 0, color = "#c0392b", linetype = "dashed", linewidth = 1) +
+  labs(title = "Pregunta 5 – Valores Ajustados vs Reales",
+       subtitle = "Línea roja = ajuste perfecto",
+       x = "Predicho (M USD)", y = "Real (M USD)") +
+  theme_hollywood()
+print(p5)
+
+
+# =============================================================
+# PREGUNTA 6: Regresión Opening Weekend Gross
+# =============================================================
+cat("\n──────────────────────────────────────────────────────\n")
+cat("PREGUNTA 6 – Regresión Opening Weekend\n")
+cat("──────────────────────────────────────────────────────\n")
+
+m6a <- lm(Opening Gross ~ Budget + Comedy + MPAA_D + Known Story + Sequel +
+            Opening Theatres + Summer + Holiday + Christmas, data = df)
+cat("6a. Modelo completo:\n")
+print(summary(m6a))
+
+m6b <- lm(Opening Gross ~ Budget + Sequel + Opening Theatres + Summer, data = df)
+cat("\n6b. Modelo final:\n")
+print(summary(m6b))
+
+cat("\n6c. Interpretación de coeficientes:\n")
+coefs6 <- coef(m6b)
+cat(sprintf("  Budget:           Por cada $1 adicional en presupuesto, Opening Gross aumenta $%.2f\n", coefs6["Budget"]))
+cat(sprintf("  Sequel:           Las secuelas generan $%s más en opening weekend\n", format(round(coefs6["Sequel"]), big.mark=",")))
+cat(sprintf("  Opening Theatres: Cada teatro adicional aporta $%s al opening gross\n", format(round(coefs6["Opening Theatres"]), big.mark=",")))
+cat(sprintf("  Summer:           Estrenar en verano reduce el opening en $%s\n", format(round(abs(coefs6["Summer"])), big.mark=",")))
+
+# 6d: +100 theatres
+se_theatres <- summary(m6b)$coefficients["Opening Theatres", "Std. Error"]
+t_crit6     <- qt(0.975, df = m6b$df.residual)
+point6d     <- 100 * coefs6["Opening Theatres"]
+ci_lo6d     <- 100 * (coefs6["Opening Theatres"] - t_crit6 * se_theatres)
+ci_hi6d     <- 100 * (coefs6["Opening Theatres"] + t_crit6 * se_theatres)
+cat(sprintf("\n6d. +100 teatros → cambio esperado en Opening Gross:\n"))
+cat(sprintf("    Estimación puntual: $%s\n", format(round(point6d), big.mark=",")))
+cat(sprintf("    IC 95%%: [$%s, $%s]\n", format(round(ci_lo6d), big.mark=","), format(round(ci_hi6d), big.mark=",")))
+
+# Gráfica Q6
+df$fitted6 <- fitted(m6b)
+p6 <- ggplot(df, aes(x = Opening Theatres, y = Opening Gross / 1e6, color = factor(Sequel))) +
+  geom_point(alpha = 0.7, size = 2.5) +
+  geom_smooth(method = "lm", se = TRUE, aes(group = 1), color = "#e2b96f", fill = "#e2b96f44") +
+  scale_color_manual(values = c("0" = "#2980b9", "1" = "#c0392b"),
+                     labels = c("No secuela", "Secuela"), name = "") +
+  labs(title = "Pregunta 6 – Opening Gross vs Número de Teatros",
+       x = "Teatros en opening", y = "Opening Gross (M USD)") +
+  theme_hollywood()
+print(p6)
+
+# =============================================================
+# PREGUNTA 7: Total U.S. Gross ~ Opening Gross
+# =============================================================
+cat("\n──────────────────────────────────────────────────────\n")
+cat("PREGUNTA 7 – Total U.S. Gross vs Opening Gross\n")
+cat("──────────────────────────────────────────────────────\n")
+
+# 7a: con intercepto
+m7a <- lm(Total U.S. Gross ~ Opening Gross, data = df)
+cat("7a. Regresión simple (con intercepto):\n")
+print(summary(m7a))
+
+slope7a <- coef(m7a)["Opening Gross"]
+se7a    <- summary(m7a)$coefficients["Opening Gross", "Std. Error"]
+cat(sprintf("\n7b. Si 25%% fuera el opening → slope debería ser 4.0\n"))
+cat(sprintf("    Slope estimado: %.4f\n", slope7a))
+
+# 7c: test slope = 4
+t_stat7c <- (slope7a - 4) / se7a
+p_val7c  <- 2 * pt(abs(t_stat7c), df = m7a$df.residual, lower.tail = FALSE)
+cat(sprintf("\n7c. H0: slope = 4  vs  H1: slope ≠ 4\n"))
+cat(sprintf("    t-stat: %.4f   p-valor: %.6f\n", t_stat7c, p_val7c))
+cat(sprintf("    Conclusión: %s al 5%%\n",
+    ifelse(p_val7c < 0.05, "SE RECHAZA H0", "No se rechaza H0")))
+
+cat("\n7d. Crítica: la regresión CON intercepto no es correcta para\n")
+cat("    evaluar la hipótesis 'Total = 4 × Opening', ya que ésta\n")
+cat("    implica un modelo SIN intercepto. El intercepto absorbe\n")
+cat("    variación y sesga el slope estimado.\n")
+
+# 7e: sin intercepto
+m7e <- lm(Total U.S. Gross ~ Opening Gross - 1, data = df)
+cat("\n7e. Regresión sin intercepto:\n")
+print(summary(m7e))
+
+slope7e <- coef(m7e)["Opening Gross"]
+se7e    <- summary(m7e)$coefficients["Opening Gross", "Std. Error"]
+t_stat7f <- (slope7e - 4) / se7e
+p_val7f  <- 2 * pt(abs(t_stat7f), df = m7e$df.residual, lower.tail = FALSE)
+cat(sprintf("\n7f. H0: slope = 4  (sin intercepto)\n"))
+cat(sprintf("    t-stat: %.4f   p-valor: %.6f\n", t_stat7f, p_val7f))
+cat(sprintf("    Conclusión: %s al 5%%\n",
+    ifelse(p_val7f < 0.05, "SE RECHAZA H0", "No se rechaza H0")))
+
+cat(sprintf("\n7g. R² (con intercepto): %.4f  → %.1f%% de la variación\n",
+            summary(m7a)$r.squared, summary(m7a)$r.squared * 100))
+
+# Gráfica Q7
+p7 <- ggplot(df, aes(x = Opening Gross / 1e6, y = Total U.S. Gross / 1e6)) +
+  geom_point(color = "#e2b96f", alpha = 0.7, size = 2.5) +
+  geom_smooth(method = "lm", color = "#2980b9", fill = "#2980b944", linewidth = 1.2) +
+  geom_abline(slope = 4, intercept = 0, color = "#c0392b", linetype = "dashed", linewidth = 1) +
+  annotate("text", x = 50, y = 180, label = "Slope = 4 (hipótesis)", color = "#c0392b", size = 3.5) +
+  annotate("text", x = 50, y = 160, label = sprintf("Slope estimado = %.2f", slope7a), color = "#2980b9", size = 3.5) +
+  labs(title = "Pregunta 7 – Total U.S. Gross vs Opening Gross",
+       subtitle = "Azul = regresión estimada | Rojo = hipótesis (slope = 4)",
+       x = "Opening Gross (M USD)", y = "Total U.S. Gross (M USD)") +
+  theme_hollywood()
+print(p7)
