@@ -333,3 +333,80 @@ p7 <- ggplot(df, aes(x = Opening Gross / 1e6, y = Total U.S. Gross / 1e6)) +
        x = "Opening Gross (M USD)", y = "Total U.S. Gross (M USD)") +
   theme_hollywood()
 print(p7)
+
+# =============================================================
+# PREGUNTA 8: Post-opening → Total U.S. Gross
+# =============================================================
+cat("\n──────────────────────────────────────────────────────\n")
+cat("PREGUNTA 8 – Regresión Post-Opening Weekend\n")
+cat("──────────────────────────────────────────────────────\n")
+
+m8a <- lm(Total U.S. Gross ~ Budget + Comedy + MPAA_D + Known Story + Sequel +
+            Opening Theatres + Summer + Holiday + Christmas +
+            Opening Gross + Critics´ Opinion, data = df)
+cat("8a. Modelo completo:\n")
+print(summary(m8a))
+
+m8b <- lm(Total U.S. Gross ~ Budget + MPAA_D + Opening Gross + Critics´ Opinion, data = df)
+cat("\n8b. Modelo final (variables significativas al 10%):\n")
+print(summary(m8b))
+
+# 8c: Flags of Our Fathers
+flags <- df[grepl("Flags", df$Movie, ignore.case = TRUE), ]
+cat("\nDatos de Flags of Our Fathers:\n")
+print(flags[, c("Movie","Budget","MPAA_D","Opening Gross","Critics´ Opinion","Total U.S. Gross")])
+
+pred8c <- predict(m8b, newdata = flags, interval = "prediction", level = 0.95)
+cat(sprintf("\n8c. Predicción para Flags of Our Fathers:\n"))
+cat(sprintf("    Estimación puntual: $%s\n", format(round(pred8c[,"fit"]), big.mark=",")))
+cat(sprintf("    IP 95%%: [$%s, $%s]\n", format(round(pred8c[,"lwr"]), big.mark=","),
+                                          format(round(pred8c[,"upr"]), big.mark=",")))
+cat(sprintf("    Valor real: $%s\n", format(flags$Total U.S. Gross, big.mark=",")))
+
+coef_critics <- coef(m8b)["Critics´ Opinion"]
+gain_10 <- 10 * coef_critics
+cat(sprintf("\n8d. Coef Critics' Opinion: $%s por punto\n", format(round(coef_critics), big.mark=",")))
+cat(sprintf("    +10 puntos → +$%s en Total U.S. Gross\n", format(round(gain_10), big.mark=",")))
+cat(sprintf("    Máximo a invertir para +10 puntos: $%s\n", format(round(gain_10), big.mark=",")))
+
+# Gráfica Q8: Critics vs Total US Gross
+p8 <- ggplot(df, aes(x = Critics´ Opinion, y = Total U.S. Gross / 1e6, color = factor(MPAA_D))) +
+  geom_point(alpha = 0.7, size = 2.5) +
+  geom_smooth(method = "lm", aes(group = 1), color = "#e2b96f", fill = "#e2b96f44") +
+  scale_color_manual(values = c("0" = "#2980b9", "1" = "#c0392b"),
+                     labels = c("Otras", "R-rated"), name = "Rating") +
+  labs(title = "Pregunta 8 – Opinión de Críticos vs Total U.S. Gross",
+       x = "Critics' Opinion Score (0-100)", y = "Total U.S. Gross (M USD)") +
+  theme_hollywood()
+print(p8)
+
+
+# =============================================================
+# PREGUNTA 9: Interacción Comedy × Critics
+# =============================================================
+cat("\n──────────────────────────────────────────────────────\n")
+cat("PREGUNTA 9 – Interacción Comedias × Críticos\n")
+cat("──────────────────────────────────────────────────────\n")
+
+m9 <- lm(Total U.S. Gross ~ Budget + MPAA_D + Opening Gross + Critics´ Opinion + Comedy_Critics,
+         data = df)
+print(summary(m9))
+
+p_interact <- summary(m9)$coefficients["Comedy_Critics", "Pr(>|t|)"]
+cat(sprintf("\nCoef interacción Comedy×Critics: $%s\n", format(round(coef(m9)["Comedy_Critics"]), big.mark=",")))
+cat(sprintf("p-valor: %.4f\n", p_interact))
+cat(sprintf("Conclusión: La teoría de Griffith %s al 10%%\n",
+    ifelse(p_interact < 0.10, "SE CONFIRMA", "NO SE PUEDE CONFIRMAR")))
+
+# Gráfica Q9: Critics vs Gross por grupo
+p9 <- ggplot(df, aes(x = Critics´ Opinion, y = Total U.S. Gross / 1e6, color = GenreGroup)) +
+  geom_point(alpha = 0.6, size = 2.5) +
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.15) +
+  scale_color_manual(values = c("Comedia" = "#e2b96f", "No Comedia" = "#2980b9")) +
+  labs(title = "Pregunta 9 – Critics' Opinion vs Total U.S. Gross por Género",
+       subtitle = "¿Afectan menos las críticas a las comedias?",
+       x = "Critics' Opinion Score", y = "Total U.S. Gross (M USD)",
+       color = "Género") +
+  theme_hollywood()
+print(p9)
+
