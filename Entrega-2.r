@@ -410,3 +410,25 @@ p9 <- ggplot(df, aes(x = Critics´ Opinion, y = Total U.S. Gross / 1e6, color = 
   theme_hollywood()
 print(p9)
 
+# =============================================================
+# PREGUNTA 10: Star Power – análisis teórico
+# =============================================================
+cat("\n──────────────────────────────────────────────────────\n")
+cat("PREGUNTA 10 – Star Power (Análisis Teórico)\n")
+cat("──────────────────────────────────────────────────────\n")
+cat(sprintf("Coef actual de Budget en Q9: $%.4f\n", coef(m9)["Budget"]))
+cat("\nPara que la conclusión de Griffith sea correcta, al agregar\n")
+cat("'star power' al modelo de la Pregunta 9:\n\n")
+cat("  1. El coeficiente de 'star power' debe ser POSITIVO y\n")
+cat("     ESTADÍSTICAMENTE SIGNIFICATIVO, indicando que más\n")
+cat("     estrellas A-list aumentan el Total U.S. Gross.\n\n")
+cat("  2. El coeficiente de 'Budget' debe REDUCIRSE notablemente\n")
+cat("     (idealmente volverse no significativo), lo que revelaría\n")
+cat("     que Budget era solo un proxy del star power: los\n")
+cat("     presupuestos altos se explicaban principalmente por\n")
+cat("     los salarios millonarios de las estrellas, no por la\n")
+cat("     calidad de la producción en sí misma.\n")
+
+cat("\n========================================================\n")
+
+
